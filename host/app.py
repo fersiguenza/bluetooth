@@ -31,6 +31,9 @@ USERNAME = os.environ.get('BT_USERNAME', '')
 PASSWORD = os.environ.get('BT_PASSWORD', '')
 AUTH_ENABLED = bool(USERNAME and PASSWORD)
 
+# API Key for host-client communication
+API_KEY = os.environ.get('BT_API_KEY', 'bluetooth-switch-default-api-key-change-me')
+
 # Store connected clients
 clients = {}
 
@@ -42,6 +45,17 @@ def login_required(f):
             return f(*args, **kwargs)
         if 'logged_in' not in session:
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def api_key_required(f):
+    """Decorator to require valid API key for client communication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check for API key in headers
+        api_key = request.headers.get('X-API-Key')
+        if not api_key or api_key != API_KEY:
+            return jsonify({'success': False, 'message': 'Invalid or missing API key'}), 401
         return f(*args, **kwargs)
     return decorated_function
 
@@ -169,7 +183,8 @@ def get_devices():
     for client_id, client_info in clients.items():
         try:
             import requests
-            response = requests.get(f'http://{client_info["ip"]}:5001/devices', timeout=3)
+            headers = {'X-API-Key': API_KEY}
+            response = requests.get(f'http://{client_info["ip"]}:5001/devices', headers=headers, timeout=3)
             if response.status_code == 200:
                 client_devices[client_id] = response.json().get('devices', [])
         except:
@@ -194,8 +209,10 @@ def toggle_client_bluetooth(client_id):
     try:
         # Send request to client
         import requests
+        headers = {'X-API-Key': API_KEY}
         response = requests.post(f'http://{client_ip}:5001/bluetooth', 
                                json={'enabled': enabled}, 
+                               headers=headers,
                                timeout=5)
         
         if response.status_code == 200:
@@ -215,6 +232,7 @@ def toggle_client_bluetooth(client_id):
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 @app.route('/api/register', methods=['POST'])
+@api_key_required
 def register_client():
     """Register a new client"""
     data = request.json
@@ -224,21 +242,26 @@ def register_client():
     if not client_id:
         return jsonify({'success': False, 'message': 'Client ID required'}), 400
     
-    # Get client's Bluetooth status
+    # Get client's Bluetooth status and devices
     bluetooth_status = False
+    devices = []
     try:
         import requests
-        response = requests.get(f'http://{client_ip}:5001/status', timeout=3)
+        headers = {'X-API-Key': API_KEY}
+        response = requests.get(f'http://{client_ip}:5001/status', headers=headers, timeout=3)
         if response.status_code == 200:
-            bluetooth_status = response.json().get('bluetooth_status', False)
-    except:
+            status_data = response.json()
+            bluetooth_status = status_data.get('bluetooth_status', False)
+            devices = status_data.get('devices', [])
+    except Exception as e:
         pass
     
     clients[client_id] = {
         'ip': client_ip,
         'registered_at': datetime.now().isoformat(),
         'last_seen': datetime.now().isoformat(),
-        'bluetooth_status': bluetooth_status
+        'bluetooth_status': bluetooth_status,
+        'devices': devices
     }
     
     print(f"✅ Client registered: {client_id} at {client_ip}")
@@ -255,7 +278,8 @@ def get_status():
     return jsonify({
         'host': {
             'ip': get_local_ip(),
-            'bluetooth_status': get_bluetooth_status()
+            'bluetooth_status': get_bluetooth_status(),
+            'devices': get_bluetooth_devices()
         },
         'clients': clients
     })

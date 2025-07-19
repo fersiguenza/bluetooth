@@ -24,6 +24,7 @@ COPY . .
 # Environment variables for authentication (can be overridden)
 ENV BT_USERNAME=admin
 ENV BT_PASSWORD=bluetooth123
+ENV BT_API_KEY=bluetooth-switch-secure-api-key-change-me
 ENV SECRET_KEY=bluetooth-switch-docker-secret-key
 
 # Expose port

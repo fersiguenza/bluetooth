@@ -302,19 +302,30 @@
         }
         
         .install-hint {
-            margin-top: 24px;
-            padding: 12px 16px;
-            background: rgba(59, 130, 246, 0.05);
-            border: 1px solid rgba(59, 130, 246, 0.1);
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
             border-radius: 12px;
-            font-size: 0.75rem;
-            color: #64748b;
+            padding: 16px;
+            margin-top: 24px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #1e40af;
             text-align: center;
-            line-height: 1.4;
-            transition: all 0.3s ease;
         }
         
-        .install-hint:hover {
+        .refresh-indicator {
+            transition: opacity 0.2s ease, transform 0.6s linear;
+        }
+        
+        .refresh-indicator.active {
+            opacity: 1;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }        .install-hint:hover {
             background: rgba(59, 130, 246, 0.08);
             border-color: rgba(59, 130, 246, 0.2);
             transform: translateY(-1px);
@@ -428,7 +439,10 @@
 <body>
     <div class="container">
         <div class="header-section">
-            <h1 class="title">Bluetooth Switch</h1>
+            <h1 class="title">
+                Bluetooth Switch
+                <i class="fas fa-sync-alt refresh-indicator" id="refresh-indicator" style="font-size: 0.7em; margin-left: 10px; color: #3b82f6; opacity: 0;"></i>
+            </h1>
             <a href="{{ url_for('logout') }}" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
                 <span class="logout-text">Logout</span>
@@ -584,6 +598,129 @@
                 messageEl.className = 'message error';
             }
         }
+        
+        // Auto-refresh functionality
+        let refreshInterval;
+        let isRefreshing = false;
+        
+        async function refreshStatus() {
+            if (isRefreshing) return;
+            isRefreshing = true;
+            
+            // Show refresh indicator
+            const refreshIndicator = document.getElementById('refresh-indicator');
+            refreshIndicator.classList.add('active');
+            console.log('🔄 Auto-refreshing status...');
+            
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                // Update host status and devices
+                if (data.host) {
+                    const hostLight = document.getElementById('host-light');
+                    if (hostLight) {
+                        hostLight.className = `status-light ${data.host.bluetooth_status ? 'on' : 'off'}`;
+                    }
+                    
+                    // Update host device list
+                    const hostDeviceList = document.querySelector('.host-section .device-list');
+                    if (hostDeviceList && data.host.devices) {
+                        updateDeviceList(hostDeviceList, data.host.devices);
+                    }
+                }
+                
+                // Update client status and devices
+                if (data.clients) {
+                    Object.keys(data.clients).forEach(clientId => {
+                        const client = data.clients[clientId];
+                        const clientLight = document.getElementById(`client-${clientId}-light`);
+                        if (clientLight) {
+                            clientLight.className = `status-light ${client.bluetooth_status ? 'on' : 'off'}`;
+                        }
+                        
+                        // Update client device list if available
+                        const clientDeviceList = document.querySelector(`#client-${clientId} .device-list`);
+                        if (clientDeviceList && client.devices) {
+                            updateDeviceList(clientDeviceList, client.devices);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Refresh failed:', error);
+            } finally {
+                // Hide refresh indicator
+                setTimeout(() => {
+                    refreshIndicator.classList.remove('active');
+                }, 500);
+                isRefreshing = false;
+            }
+        }
+        
+        function updateDeviceList(deviceListEl, devices) {
+            if (!devices || devices.length === 0) {
+                deviceListEl.innerHTML = '<div class="device-item">No devices connected</div>';
+                return;
+            }
+            
+            const deviceHTML = devices.map(device => {
+                // Handle both string format and object format
+                if (typeof device === 'string') {
+                    return `
+                        <div class="device-item">
+                            <i class="fas fa-mouse"></i>
+                            <span>${device}</span>
+                        </div>
+                    `;
+                } else {
+                    const iconClass = device.type === 'keyboard' ? 'keyboard' : (device.type === 'mouse' ? 'mouse' : 'bluetooth');
+                    return `
+                        <div class="device-item">
+                            <i class="fas fa-${iconClass}"></i>
+                            <span>${device.name}</span>
+                        </div>
+                    `;
+                }
+            }).join('');
+            
+            deviceListEl.innerHTML = deviceHTML;
+        }
+        
+        // Start auto-refresh when page becomes visible
+        function startAutoRefresh() {
+            if (refreshInterval) return;
+            
+            // Refresh immediately
+            refreshStatus();
+            
+            // Then refresh every 5 seconds
+            refreshInterval = setInterval(refreshStatus, 5000);
+            console.log('🔄 Auto-refresh started (every 5 seconds)');
+        }
+        
+        // Stop auto-refresh when page becomes hidden
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+                console.log('⏹️ Auto-refresh stopped');
+            }
+        }
+        
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                startAutoRefresh();
+            }
+        });
+        
+        // Start auto-refresh on page load
+        window.addEventListener('load', startAutoRefresh);
+        
+        // Stop auto-refresh when page unloads
+        window.addEventListener('beforeunload', stopAutoRefresh);
         
         // Just hide the hint if already running as web app
         if (window.navigator.standalone === true) {

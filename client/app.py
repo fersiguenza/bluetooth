@@ -4,18 +4,31 @@ import time
 import argparse
 import socket
 import threading
+import os
 from flask import Flask, request, jsonify
 from datetime import datetime
+from functools import wraps
 
 class BluetoothClient:
     def __init__(self, host_ip, client_name=None):
-        self.host_ip = host_ip
+        self.host_ip = host_ip  # Can be full URL or just IP
         self.client_name = client_name or socket.gethostname()
         self.running = True
+        self.api_key = os.environ.get('BT_API_KEY', 'bluetooth-switch-default-api-key-change-me')
         
         # Create Flask app for receiving commands
         self.app = Flask(__name__)
         self.setup_routes()
+    
+    def api_key_required(self, f):
+        """Decorator to require valid API key"""
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            api_key = request.headers.get('X-API-Key')
+            if not api_key or api_key != self.api_key:
+                return jsonify({'success': False, 'message': 'Invalid or missing API key'}), 401
+            return f(*args, **kwargs)
+        return decorated_function
     
     def get_bluetooth_status(self):
         """Get current Bluetooth status using blueutil"""
@@ -63,6 +76,7 @@ class BluetoothClient:
         """Setup Flask routes for receiving commands"""
         
         @self.app.route('/bluetooth', methods=['POST'])
+        @self.api_key_required
         def toggle_bluetooth():
             data = request.json
             enabled = data.get('enabled', False)
@@ -79,14 +93,17 @@ class BluetoothClient:
             })
         
         @self.app.route('/status', methods=['GET'])
+        @self.api_key_required
         def get_status():
             return jsonify({
                 'client_id': self.client_name,
                 'bluetooth_status': self.get_bluetooth_status(),
+                'devices': self.get_bluetooth_devices(),
                 'timestamp': datetime.now().isoformat()
             })
         
         @self.app.route('/devices', methods=['GET'])
+        @self.api_key_required
         def get_devices():
             return jsonify({
                 'client_id': self.client_name,
@@ -97,12 +114,17 @@ class BluetoothClient:
     def register_with_host(self):
         """Register this client with the host"""
         try:
-            response = requests.post(f'http://{self.host_ip}:5002/api/register',
+            headers = {'X-API-Key': self.api_key}
+            # Handle both full URLs and IP addresses
+            host_url = self.host_ip if self.host_ip.startswith('http') else f'http://{self.host_ip}:5002'
+            response = requests.post(f'{host_url}/api/register',
                                    json={'client_id': self.client_name},
+                                   headers=headers,
                                    timeout=5)
             
             if response.status_code == 200:
-                print(f"✅ Successfully registered with host at {self.host_ip}")
+                host_url = self.host_ip if self.host_ip.startswith('http') else f'http://{self.host_ip}:5002'
+                print(f"✅ Successfully registered with host at {host_url}")
                 return True
             else:
                 print(f"❌ Failed to register with host: {response.status_code}")

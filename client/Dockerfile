@@ -23,6 +23,7 @@ COPY . .
 
 # Environment variable for host connection
 ENV HOST_IP=host.docker.internal
+ENV BT_API_KEY=bluetooth-switch-secure-api-key-change-me
 
 # Expose port
 EXPOSE 5001

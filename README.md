@@ -11,18 +11,22 @@ A simple Flask## 🚀 Quick Start
 
 # Custom credentials
 ./scripts/run_with_auth.sh myuser mypassword
+
+# Custom credentials with API key
+./scripts/run_with_auth.sh myuser mypassword my-secure-api-key
 ```
 
 **Option 2: Environment variables**
 ```bash
 export BT_USERNAME="myuser"
-export BT_PASSWORD="mypassword"
+export BT_PASSWORD="mypassword"  
+export BT_API_KEY="my-secure-api-key"
 cd host && python3 app.py
 ```
 
 **Option 3: Docker with custom credentials**
 ```bash
-BT_USERNAME=myuser BT_PASSWORD=mypass docker-compose -f docker/docker-compose.yml up
+BT_USERNAME=myuser BT_PASSWORD=mypass BT_API_KEY=my-api-key docker-compose -f docker/docker-compose.yml up
 ```
 
 ### 📱 iPhone Home Screen Setup
@@ -183,22 +187,35 @@ blueutil -p 0  # Turn Bluetooth OFF
 
 - **Local network only**: The system only works on your local WiFi network
 - **Optional Authentication**: Set BT_USERNAME and BT_PASSWORD environment variables for login protection
+- **API Key Protection**: Host-client communication secured with BT_API_KEY environment variable
 - **Session-based**: Login sessions are maintained until browser is closed or logout
-- **Environment Variables**: Credentials are configured via environment variables (not hardcoded)
+- **Environment Variables**: All credentials configured via environment variables (not hardcoded)
 - **HTTP only**: Uses plain HTTP since it's local network only (consider HTTPS for production)
+
+### Security Features:
+- **Web Authentication**: Login required to access the web interface
+- **API Key Authentication**: Only clients with matching API key can register and communicate
+- **Session Management**: Secure session handling for web access
+- **Environment-based Config**: No secrets stored in code
 
 ### Authentication Examples:
 ```bash
-# No authentication (anyone on network can access)
+# No authentication (anyone on network can access, not recommended)
 python3 app.py
 
-# With authentication 
+# With web authentication only
 export BT_USERNAME="admin"
 export BT_PASSWORD="secure123"
 python3 app.py
 
-# Docker with auth
-BT_USERNAME=admin BT_PASSWORD=secure123 docker-compose up
+# Full security (web auth + API key protection)
+export BT_USERNAME="admin"
+export BT_PASSWORD="secure123"
+export BT_API_KEY="my-super-secure-api-key-change-this"
+python3 app.py
+
+# Docker with full security
+BT_USERNAME=admin BT_PASSWORD=secure123 BT_API_KEY=my-secure-key docker-compose up
 ```
 
 ## 🐛 Troubleshooting
