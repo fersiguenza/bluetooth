@@ -1,0 +1,30 @@
+services:
+  bluetooth-host:
+    build:
+      context: ../host
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    volumes:
+      - /var/run/dbus:/var/run/dbus:ro
+      - /sys:/sys:ro
+    privileged: true
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+      - BT_USERNAME=${BT_USERNAME:-admin}
+      - BT_PASSWORD=${BT_PASSWORD:-bluetooth123}
+      - SECRET_KEY=${SECRET_KEY:-bluetooth-switch-docker-secret-key}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Note: Client should be run separately on the second Mac
+  # Use: docker-compose -f docker-compose.client.yml up
+  # 
+  # To set custom credentials:
+  # BT_USERNAME=myuser BT_PASSWORD=mypass docker-compose up

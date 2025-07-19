@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #334155;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: #1e293b;
+            margin-bottom: 40px;
+            padding: 20px 0;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            color: #64748b;
+            font-weight: 400;
+        }
+        
+        .device-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(100, 116, 139, 0.1);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: all 0.3s ease;
+        }
+        
+        .device-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(100, 116, 139, 0.15);
+        }
+        
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .device-name {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .device-ip {
+            color: #64748b;
+            font-size: 0.95em;
+            font-weight: 500;
+            background: #f1f5f9;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            margin-top: 8px;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: all 0.2s ease;
+        }
+        
+        .status-on {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            color: #166534;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .status-off {
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .dot-on {
+            background: #22c55e;
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+        }
+        
+        .dot-off {
+            background: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+            }
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.05em;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-on {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border: 2px solid transparent;
+        }
+        
+        .btn-on:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+        }
+        
+        .btn-off {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: 2px solid transparent;
+        }
+        
+        .btn-off:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+        }
+        
+        .quick-switch {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 18px 40px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.2em;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 30px auto;
+            display: block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .quick-switch:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(59, 130, 246, 0.4);
+        }
+        
+        .message {
+            text-align: center;
+            padding: 18px 25px;
+            margin: 25px 0;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 1.05em;
+            border: 1px solid;
+        }
+        
+        .message.success {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            color: #166534;
+            border-color: #a7f3d0;
+        }
+        
+        .message.error {
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+            color: #991b1b;
+            border-color: #fca5a5;
+        }
+        
+        .no-clients {
+            text-align: center;
+            color: #64748b;
+            padding: 40px 30px;
+            background: white;
+            border-radius: 20px;
+            margin: 30px 0;
+            border: 2px dashed #cbd5e1;
+        }
+        
+        .no-clients h3 {
+            color: #334155;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .no-clients p {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .no-clients code {
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            color: #1e293b;
+            font-size: 0.9em;
+        }
+        
+        .footer-actions {
+            text-align: center; 
+            margin-top: 40px; 
+            padding: 30px 0;
+        }
+        
+        .footer-actions p {
+            color: #64748b; 
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.9); 
+            color: #334155; 
+            border: 2px solid #e2e8f0; 
+            padding: 12px 25px; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+        
+        .refresh-btn:hover {
+            background: white;
+            border-color: #cbd5e1;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(100, 116, 139, 0.15);
+        }
+        
+        @media (max-width: 600px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .device-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔵 Bluetooth Manager</h1>
+            <p>Control Bluetooth on your Macs</p>
+        </div>
+        
+        <div id="message" class="message" style="display: none;"></div>
+        
+        <!-- Host Mac -->
+        <div class="device-card">
+            <div class="device-header">
+                <div>
+                    <div class="device-name">🖥️ Host Mac</div>
+                    <div class="device-ip">{{ host_ip }}</div>
+                </div>
+                <div class="status-indicator {% if host_bt_status %}status-on{% else %}status-off{% endif %}" id="host-status">
+                    <div class="status-dot {% if host_bt_status %}dot-on{% else %}dot-off{% endif %}"></div>
+                    <span>{% if host_bt_status %}Bluetooth ON{% else %}Bluetooth OFF{% endif %}</span>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="btn btn-on" onclick="toggleBluetooth('host', true)" {% if host_bt_status %}disabled{% endif %}>
+                    Turn ON
+                </button>
+                <button class="btn btn-off" onclick="toggleBluetooth('host', false)" {% if not host_bt_status %}disabled{% endif %}>
+                    Turn OFF
+                </button>
+            </div>
+        </div>
+        
+        <!-- Client Macs -->
+        {% if clients %}
+            {% for client_id, client_info in clients.items() %}
+            <div class="device-card">
+                <div class="device-header">
+                    <div>
+                        <div class="device-name">💻 {{ client_id }}</div>
+                        <div class="device-ip">{{ client_info.ip }}</div>
+                    </div>
+                    <div class="status-indicator {% if client_info.bluetooth_status %}status-on{% else %}status-off{% endif %}" id="client-{{ client_id }}-status">
+                        <div class="status-dot {% if client_info.bluetooth_status %}dot-on{% else %}dot-off{% endif %}"></div>
+                        <span>{% if client_info.bluetooth_status %}Bluetooth ON{% else %}Bluetooth OFF{% endif %}</span>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-on" onclick="toggleBluetooth('{{ client_id }}', true)" {% if client_info.bluetooth_status %}disabled{% endif %}>
+                        Turn ON
+                    </button>
+                    <button class="btn btn-off" onclick="toggleBluetooth('{{ client_id }}', false)" {% if not client_info.bluetooth_status %}disabled{% endif %}>
+                        Turn OFF
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Quick Switch Button -->
+            <button class="quick-switch" onclick="quickSwitch()">
+                🔄 Quick Switch (Toggle Both)
+            </button>
+        {% else %}
+            <div class="no-clients">
+                <h3>No clients connected</h3>
+                <p>Run the client script on your other Mac to connect it.</p>
+                <p><code>python3 client.py --host {{ host_ip }}</code></p>
+            </div>
+        {% endif %}
+        
+        <div class="footer-actions">
+            <p>💡 Refresh the page to see updated status</p>
+            <button onclick="location.reload()" class="refresh-btn">
+                🔄 Refresh
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(text, isError = false) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${isError ? 'error' : 'success'}`;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateStatus(deviceId, enabled) {
+            const statusEl = document.getElementById(deviceId === 'host' ? 'host-status' : `client-${deviceId}-status`);
+            const dot = statusEl.querySelector('.status-dot');
+            const text = statusEl.querySelector('span');
+            
+            if (enabled) {
+                statusEl.className = 'status-indicator status-on';
+                dot.className = 'status-dot dot-on';
+                text.textContent = 'Bluetooth ON';
+            } else {
+                statusEl.className = 'status-indicator status-off';
+                dot.className = 'status-dot dot-off';
+                text.textContent = 'Bluetooth OFF';
+            }
+            
+            // Update buttons
+            const deviceCard = statusEl.closest('.device-card');
+            const onBtn = deviceCard.querySelector('.btn-on');
+            const offBtn = deviceCard.querySelector('.btn-off');
+            
+            onBtn.disabled = enabled;
+            offBtn.disabled = !enabled;
+        }
+
+        async function toggleBluetooth(deviceId, enabled) {
+            try {
+                const url = deviceId === 'host' ? 
+                    '/api/bluetooth/host' : 
+                    `/api/bluetooth/client/${deviceId}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStatus(deviceId, result.status);
+                    showMessage(result.message);
+                } else {
+                    showMessage(result.message || 'Operation failed', true);
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, true);
+            }
+        }
+
+        async function quickSwitch() {
+            try {
+                // First turn off all devices
+                await toggleBluetooth('host', false);
+                
+                // Wait a bit for the first command to complete
+                setTimeout(async () => {
+                    // Turn on clients
+                    const clientCards = document.querySelectorAll('.device-card');
+                    for (let i = 1; i < clientCards.length; i++) { // Skip first (host)
+                        const clientId = clientCards[i].querySelector('.device-name').textContent.replace('💻 ', '');
+                        if (clientId !== 'No clients connected') {
+                            await toggleBluetooth(clientId, true);
+                        }
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                showMessage(`Quick switch error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth Switch</title>
+    
+    <!-- PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Bluetooth Switch">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="/icon-192.png">
+    <link rel="shortcut icon" href="/icon-192.png">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow-x: hidden;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%);
+            color: #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100svh; /* For mobile browsers */
+            padding: 16px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 24px;
+            padding: 40px 32px;
+            box-shadow: 
+                0 8px 32px rgba(59, 130, 246, 0.15),
+                0 0 60px rgba(59, 130, 246, 0.08),
+                inset 0 1px 0 rgba(59, 130, 246, 0.05);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+        
+        .title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: #1e293b;
+            margin: 0;
+            text-align: center;
+            letter-spacing: -0.02em;
+            text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+            flex: 1;
+        }
+        
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .logout-btn {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: rgba(100, 116, 139, 0.1);
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(100, 116, 139, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .logout-text {
+            display: inline;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 480px) {
+            .header-section {
+                flex-direction: column;
+                text-align: center;
+                gap: 16px;
+                margin-bottom: 32px;
+            }
+            
+            .title {
+                font-size: 2rem;
+                order: 1;
+            }
+            
+            .logout-btn {
+                order: 2;
+                font-size: 0.85rem;
+                padding: 6px 12px;
+            }
+            
+            .logout-text {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .title {
+                font-size: 1.8rem;
+            }
+        }        .status-lights {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            gap: 32px;
+        }
+        
+        .device {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .device-icon {
+            font-size: 5rem;
+            color: #64748b;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.2));
+        }
+        
+        .device-icon:hover {
+            color: #3b82f6;
+            transform: scale(1.05);
+            filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.4));
+        }
+        
+        .device-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 16px;
+            text-shadow: 0 1px 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .status-light {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 3px solid rgba(203, 213, 225, 0.5);
+            background: #f8fafc;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        
+        .status-light::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            transition: all 0.4s ease;
+        }
+        
+        .status-light.on {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+            box-shadow: 
+                0 0 20px rgba(59, 130, 246, 0.4),
+                0 0 40px rgba(59, 130, 246, 0.2),
+                inset 0 0 10px rgba(59, 130, 246, 0.1);
+        }
+        
+        .status-light.on::before {
+            background: #3b82f6;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+        }
+        
+        .status-light.off {
+            background: #f8fafc;
+            border-color: rgba(203, 213, 225, 0.5);
+        }
+        
+        .status-light.off::before {
+            background: #cbd5e1;
+        }
+        
+        .switch-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #1e40af 100%);
+            color: white;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 32px;
+            padding: 20px 42px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 8px 24px rgba(59, 130, 246, 0.3),
+                0 0 30px rgba(59, 130, 246, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            margin-bottom: 32px;
+            min-width: 180px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            letter-spacing: 0.025em;
+        }
+        
+        .switch-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+                0 12px 32px rgba(59, 130, 246, 0.4),
+                0 0 40px rgba(59, 130, 246, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e3a8a 100%);
+        }
+        
+        .switch-button:active {
+            transform: translateY(-1px);
+        }
+        
+        .message {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #64748b;
+            min-height: 22px;
+            line-height: 1.4;
+            text-shadow: 0 1px 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .message.success {
+            color: #2563eb;
+            text-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+        }
+        
+        .message.error {
+            color: #dc2626;
+            text-shadow: 0 0 10px rgba(220, 38, 38, 0.2);
+        }
+        
+        .no-client {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            margin-top: 20px;
+            line-height: 1.4;
+            text-shadow: 0 1px 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .device-list {
+            margin-top: 8px;
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+        
+        .device-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            margin: 2px 0;
+        }
+        
+        .device-item i {
+            font-size: 0.8rem;
+            color: #3b82f6;
+            filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.3));
+        }
+        
+        .install-hint {
+            margin-top: 24px;
+            padding: 12px 16px;
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: #64748b;
+            text-align: center;
+            line-height: 1.4;
+            transition: all 0.3s ease;
+        }
+        
+        .install-hint:hover {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: rgba(59, 130, 246, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .install-hint i {
+            color: #3b82f6;
+            margin-right: 4px;
+        }
+        
+        .install-hint.hidden {
+            display: none;
+        }
+        
+        .install-hint.clickable {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        /* Mobile optimizations */
+        @media screen and (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            
+            .container {
+                padding: 32px 20px;
+                border-radius: 20px;
+                max-width: none;
+            }
+            
+            .status-lights {
+                margin-bottom: 32px;
+                gap: 20px;
+            }
+            
+            .device-icon {
+                font-size: 3.5rem;
+            }
+            
+            .device-name {
+                font-size: 0.9rem;
+            }
+            
+            .status-light {
+                width: 22px;
+                height: 22px;
+            }
+            
+            .status-light::before {
+                width: 10px;
+                height: 10px;
+            }
+            
+            .switch-button {
+                min-width: 140px;
+                padding: 16px 28px;
+                font-size: 1rem;
+            }
+        }
+        
+        /* Extra small screens */
+        @media screen and (max-width: 320px) {
+            .container {
+                padding: 24px 16px;
+            }
+            
+            .status-lights {
+                gap: 16px;
+            }
+            
+            .device-icon {
+                font-size: 3rem;
+            }
+            
+            .switch-button {
+                min-width: 120px;
+                padding: 14px 24px;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Landscape on mobile */
+        @media screen and (max-height: 600px) and (orientation: landscape) {
+            body {
+                min-height: 100vh;
+                padding: 8px;
+            }
+            
+            .container {
+                padding: 20px 16px;
+            }
+            
+            .status-lights {
+                margin-bottom: 20px;
+            }
+            
+            .switch-button {
+                margin-bottom: 16px;
+            }
+        }
+        
+        /* High DPI displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .status-light {
+                border-width: 1px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1 class="title">Bluetooth Switch</h1>
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="logout-text">Logout</span>
+            </a>
+        </div>
+        
+        <div class="status-lights">
+            <div class="device">
+                <div class="device-icon">
+                    <i class="fab fa-apple"></i>
+                </div>
+                <div class="device-name">{{ host_name }}</div>
+                <div class="status-light {% if host_bt_status %}on{% else %}off{% endif %}" id="host-light"></div>
+                {% if host_devices %}
+                <div class="device-list">
+                    {% for device in host_devices %}
+                    <div class="device-item">
+                        <i class="fas fa-{% if device.type == 'keyboard' %}keyboard{% elif device.type == 'mouse' %}mouse{% else %}bluetooth{% endif %}"></i>
+                        <span>{{ device.name }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="device">
+                <div class="device-icon">
+                    <i class="fab fa-apple"></i>
+                </div>
+                <div class="device-name">
+                {% if clients %}
+                    {% for client_id, client_info in clients.items() %}
+                        {{ client_id }}
+                    {% endfor %}
+                {% else %}
+                    Client Mac
+                {% endif %}
+                </div>
+                {% if clients %}
+                    {% for client_id, client_info in clients.items() %}
+                    <div class="status-light {% if client_info.bluetooth_status %}on{% else %}off{% endif %}" id="client-light"></div>
+                    {% endfor %}
+                {% else %}
+                    <div class="status-light off" id="client-light"></div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if clients %}
+        <button class="switch-button" onclick="switchBluetooth()">
+            <i class="fas fa-exchange-alt"></i> Switch
+        </button>
+        {% endif %}
+        
+        <div class="message" id="message">
+            {% if clients %}
+                {% if host_bt_status %}
+                    Bluetooth enabled on {{ host_name }}
+                {% else %}
+                    {% for client_id, client_info in clients.items() %}
+                        {% if client_info.bluetooth_status %}
+                            Bluetooth enabled on {{ client_id }}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% else %}
+                Connect second Mac to enable switching
+            {% endif %}
+        </div>
+        
+        {% if not clients %}
+        <div class="no-client">
+            Run client on your second Mac
+        </div>
+        {% endif %}
+        
+        <div class="install-hint" id="install-hint">
+            <i class="fas fa-mobile-alt"></i>
+            <strong>Add to iPhone Home Screen:</strong><br>
+            <div style="margin-top: 8px;">
+                <strong>Safari:</strong> Tap Share <i class="fas fa-share"></i> → "Add to Home Screen"<br>
+                <strong>Chrome:</strong> Tap ⋮ Menu → "Add to Home Screen" or "Install App"
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateMessage(mac) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = `Bluetooth enabled on ${mac}`;
+            messageEl.className = 'message success';
+            
+            setTimeout(() => {
+                messageEl.className = 'message';
+            }, 3000);
+        }
+
+        function updateLights(hostOn, clientOn) {
+            const hostLight = document.getElementById('host-light');
+            const clientLight = document.getElementById('client-light');
+            
+            hostLight.className = `status-light ${hostOn ? 'on' : 'off'}`;
+            clientLight.className = `status-light ${clientOn ? 'on' : 'off'}`;
+        }
+
+        async function toggleBluetooth(device, enabled) {
+            try {
+                const url = device === 'host' ? '/api/bluetooth/host' : `/api/bluetooth/client/${device}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Toggle error:', error);
+                return { success: false };
+            }
+        }
+
+        async function switchBluetooth() {
+            try {
+                // Turn off Mac 1
+                const hostResult = await toggleBluetooth('host', false);
+                
+                if (hostResult.success) {
+                    updateLights(false, false);
+                    
+                    // Wait a bit, then turn on client Mac
+                    setTimeout(async () => {
+                        const clientCards = document.querySelectorAll('[id^="client-"]');
+                        if (clientCards.length > 0) {
+                            const clientId = '{{ clients.keys()|list|first if clients else "" }}';
+                            if (clientId) {
+                                const clientResult = await toggleBluetooth(clientId, true);
+                                if (clientResult.success) {
+                                    updateLights(false, true);
+                                    updateMessage(clientId);
+                                    // Refresh the page to update device lists
+                                    setTimeout(() => {
+                                        window.location.reload();
+                                    }, 2000);
+                                }
+                            }
+                        }
+                    }, 1000);
+                }
+            } catch (error) {
+                const messageEl = document.getElementById('message');
+                messageEl.textContent = 'Switch failed';
+                messageEl.className = 'message error';
+            }
+        }
+        
+        // Just hide the hint if already running as web app
+        if (window.navigator.standalone === true) {
+            document.getElementById('install-hint').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+services:
+  bluetooth-client:
+    build:
+      context: ../client
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - /var/run/dbus:/var/run/dbus:ro
+      - /sys:/sys:ro
+    privileged: true
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - HOST_IP=${HOST_IP}
+      - CLIENT_NAME=${CLIENT_NAME:-$(hostname)}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
